@@ -2,7 +2,7 @@
 
 Sx is a just-in-time CSS generator based on the Tailwind API.
 
-```reasonml
+```rescript
 module Button = {
   @react.component
   let make = () => {
