@@ -1,0 +1,44 @@
+{
+  "name": "sx_ppx",
+  "version": "0.8.4",
+  "description": "Styling extensions for ReScript",
+  "author": "Rizo I. <rizo@odis.io>",
+  "license": "MIT",
+  "homepage": "https://github.com/rizo/rescript-sx",
+  "bugs": {
+    "url": "https://github.com/rizo/rescript-sx/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rizo/rescript-sx.git"
+  },
+  "esy": {
+    "build": "dune build -p #{self.name}",
+    "buildsInSource": "_build",
+    "release": {
+      "bin": [
+        "sx_ppx",
+        "sx"
+      ]
+    }
+  },
+  "dependencies": {
+    "@opam/yojson": "*",
+    "@opam/sedlex": "*",
+    "@opam/fmt": "*",
+    "@opam/bos": "*",
+    "@opam/dune": "*",
+    "@opam/ppxlib": ">=0.21.0"
+  },
+  "devDependencies": {
+    "@opam/ocaml-lsp-server": "*",
+    "ocaml": "~4.12.x",
+    "@opam/ocamlformat": "*",
+    "@opam/utop": "*"
+  },
+  "scripts": {
+    "clean": "esy dune clean",
+    "build": "esy dune build @all -p #{self.name}",
+    "watch": "esy dune build @all -p #{self.name} --watch"
+  }
+}

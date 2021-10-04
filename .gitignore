@@ -1,0 +1,6 @@
+_build/
+.merlin
+*.install
+_opam/
+_esy/
+node_modules/

@@ -1,0 +1,6 @@
+(library
+ (name Sx)
+ (public_name sx.lib)
+ (libraries bos fpath yojson fmt sedlex sedlex.ppx)
+ (preprocess
+  (pps sedlex.ppx)))

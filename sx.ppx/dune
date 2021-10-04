@@ -1,0 +1,17 @@
+
+(library
+ (name Sx_ppx)
+ (modules Sx_ppx)
+ (public_name sx.ppx)
+ (kind ppx_rewriter)
+ (libraries sx.lib ppxlib)
+ (preprocess
+  (pps ppxlib.metaquot)))
+
+(executable
+ (package sx)
+ (modules Main)
+ (name Main)
+ (public_name sx_ppx)
+ (libraries sx.ppx ppxlib)
+ (ocamlopt_flags (-linkall)))
