@@ -5,15 +5,16 @@ module Ast_pattern = Ppxlib.Ast_pattern
 module Ast_builder = Ppxlib.Ast_builder
 module Code_path = Ppxlib.Code_path
 
-let output_path = ref "/tmp/sx.css"
+let _output_path = ref "sx.css"
+let output_path () = Fpath.(v ("../../" ^ !_output_path))
 
 let tailwind_path = ref "/tmp/tailwind.json"
 
 let tailwind = lazy (Sx.of_file !tailwind_path)
 
-let error ~loc msg = raise (Location.Error (Location.error ~loc msg))
+let error ~loc msg = Location.raise_errorf ~loc "%s" msg
 
-(* TODO: Get the module name and delet cache if the ppx is NOT used in the module. *)
+(* TODO: Get the module name and delete cache if the ppx is NOT used in the module. *)
 let process ~ctxt sx_class_name =
   let loc = Expansion_context.Extension.extension_point_loc ctxt in
   (* TODO return normalized class name!!! *)
@@ -34,7 +35,7 @@ let my_extension =
 let rule = Ppxlib.Context_free.Rule.extension my_extension
 
 let () =
-  Ppxlib.Driver.add_arg "-sx-output-file"
-    (Arg.String (fun key -> output_path := key))
+  Ppxlib.Driver.add_arg "--output"
+    (Arg.String (fun key -> _output_path := key))
     ~doc:"<file> Where the generated CSS should be saved.";
   Driver.register_transformation ~rules:[ rule ] "sx"

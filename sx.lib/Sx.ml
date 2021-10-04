@@ -1,6 +1,8 @@
 module String_map = Map.Make (String)
 module String_set = Set.Make (String)
 
+module Preflight = Preflight
+
 module Css = struct
   type t = {
     global : string list String_map.t;
@@ -118,77 +120,6 @@ let list_concat_map f l =
 
 
 type t = string list String_map.t
-
-type 'a iter = ('a -> unit) -> unit
-
-type 'a fmt = Format.formatter -> 'a -> unit
-
-module Lexer = struct
-  type token =
-    [ `Utility of string
-    | `Variant of string
-    | `Utility_group_start of string
-    | `Variant_group_start of string
-    | `Group_end ]
-
-  let pp : token fmt =
-   fun ppf token ->
-    let str = Format.pp_print_string ppf in
-    match token with
-    | `Utility x -> str x
-    | `Variant x -> str (x ^ ":")
-    | `Utility_group_start x -> str (x ^ "(")
-    | `Variant_group_start x -> str (x ^ ":(")
-    | `Group_end -> str ")"
-
-
-  let variant = [%sedlex.regexp? Plus (lowercase | '-' | '0' .. '9'), ':']
-
-  let utility = [%sedlex.regexp? Plus (lowercase | '-' | '0' .. '9')]
-
-  type t = { mutable buf : Sedlexing.lexbuf; mutable group_count : int }
-
-  let token self : token list =
-    let buf = self.buf in
-    let rec loop acc =
-      match%sedlex buf with
-      | Plus (' ' | '\t' | '\n') -> loop acc
-      | variant ->
-        let lexeme = Sedlexing.Latin1.lexeme buf in
-        let variant = String.sub lexeme 0 (String.length lexeme - 1) in
-        loop (`Variant variant :: acc)
-      | utility -> loop (`Utility (Sedlexing.Latin1.lexeme buf) :: acc)
-      | '(' -> failwith "Unexpected '('"
-      | variant, '(' ->
-        self.group_count <- self.group_count + 1;
-        let lexeme = Sedlexing.Latin1.lexeme buf in
-        let variant = String.sub lexeme 0 (String.length lexeme - 2) in
-        loop (`Variant_group_start variant :: acc)
-      | utility, '(' ->
-        self.group_count <- self.group_count + 1;
-        let lexeme = Sedlexing.Latin1.lexeme buf in
-        let utility = String.sub lexeme 0 (String.length lexeme - 1) in
-        loop (`Utility_group_start utility :: acc)
-      | ')' ->
-        self.group_count <- self.group_count - 1;
-        if self.group_count < 0 then failwith "sx: Unexpected ')'"
-        else loop (`Group_end :: acc)
-      | eof ->
-        if self.group_count <> 0 then failwith "sx: Missing ')'";
-        acc
-      | any ->
-        Fmt.failwith "sx: Unexpected character: '%s'"
-          (Sedlexing.Latin1.lexeme buf)
-      | _ -> failwith "sx: Unexpected input"
-    in
-    List.rev (loop [])
-
-
-  let read input =
-    let buf = Sedlexing.Latin1.from_string input in
-    let self = { buf; group_count = 0 } in
-    token self
-end
 
 type attribute =
   [ `Utility of string
@@ -419,6 +350,9 @@ let process (mapping : string list String_map.t) class_name =
 let update_global_css css =
   Global.module_css := Css.union !Global.module_css css
 
+let global_css_is_empty () =
+  Css.is_empty !Global.module_css
+
 
 (* This function is registered as a [at_exit] hook and is executed when all of
    the extension analysis is complete. The result of the analysis is stored in
@@ -438,18 +372,17 @@ let write_module_cache ~lib_bs ~input_name =
   in
   let module_name = Fpath.(v input_name |> rem_ext ~multi:true |> basename) in
   let cache_file = Fpath.(sx_cache_dir / module_name |> add_ext "mldata") in
-  if Css.is_empty !Global.module_css then (
-    prerr_endline
-      ("sx: Deleting a potential stale cache file: "
-     ^ Fpath.to_string cache_file);
-    Bos.OS.File.delete cache_file |> Result.get_ok)
-  else (
-    Fmt.epr "sx: Creating a cache file: %a@." Fpath.pp cache_file;
+  if Css.is_empty !Global.module_css then
+    Bos.OS.File.delete cache_file |> Result.get_ok
+  else
+    (* Fmt.epr "sx: Creating a cache file: %a@." Fpath.pp cache_file; *)
     let chan = open_out_bin (Fpath.to_string cache_file) in
-    output_value chan !Global.module_css)
+    output_value chan !Global.module_css;
+    close_out chan
 
 
 let read_module_cache path =
   let chan = open_in_bin (Fpath.to_string path) in
   let css : Css.t = input_value chan in
+  close_in chan;
   css

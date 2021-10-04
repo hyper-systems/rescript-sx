@@ -1,6 +1,0 @@
-(executable
- (package sx)
- (name Main)
- (public_name sx)
- (libraries bos sx.lib)
- (ocamlopt_flags (-linkall)))
