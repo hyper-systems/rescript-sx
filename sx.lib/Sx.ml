@@ -350,9 +350,8 @@ let process (mapping : string list String_map.t) class_name =
 let update_global_css css =
   Global.module_css := Css.union !Global.module_css css
 
-let global_css_is_empty () =
-  Css.is_empty !Global.module_css
 
+let global_css_is_empty () = Css.is_empty !Global.module_css
 
 (* This function is registered as a [at_exit] hook and is executed when all of
    the extension analysis is complete. The result of the analysis is stored in
