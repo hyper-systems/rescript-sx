@@ -8,7 +8,9 @@ module Code_path = Ppxlib.Code_path
 let _output_path = ref "sx.css"
 let output_path () = Fpath.(v ("../../" ^ !_output_path))
 
-let tailwind_path = ref "/tmp/tailwind.json"
+let tailwind_path =
+  ref "../../node_modules/@hyper-systems/rescript-sx/tailwind.json"
+
 
 let tailwind = lazy (Sx.of_file !tailwind_path)
 
