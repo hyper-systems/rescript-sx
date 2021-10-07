@@ -1,12 +1,12 @@
 {
   "checksum": "fa2fd5bf2c98725b7b5830308e09da16",
-  "root": "sx_ppx@link-dev:./esy.json",
+  "root": "sx_ppx@link-dev:./package.json",
   "node": {
-    "sx_ppx@link-dev:./esy.json": {
-      "id": "sx_ppx@link-dev:./esy.json",
+    "sx_ppx@link-dev:./package.json": {
+      "id": "sx_ppx@link-dev:./package.json",
       "name": "sx_ppx",
-      "version": "link-dev:./esy.json",
-      "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
+      "version": "link-dev:./package.json",
+      "source": { "type": "link-dev", "path": ".", "manifest": "package.json" },
       "overrides": [],
       "dependencies": [
         "@opam/yojson@opam:1.7.0@69d87312", "@opam/sedlex@opam:2.4@b5e4814c",

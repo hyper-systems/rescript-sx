@@ -1,0 +1,128 @@
+# based of https://github.com/davesnx/styled-ppx/blob/main/.github/workflows/ci.yml
+name: rescript-sx CI
+
+on: pull_request
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [14.x]
+        os: [macos-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Load global cache (~/.esy/source)
+        uses: actions/cache@v2
+        with:
+          path: ~/.esy/source
+          key: source-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+
+      - name: Install esy
+        run: npm install -g esy@0.6.11
+
+      - name: Install dependencies
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node .github/ci-scripts/print-esy-cache.js
+
+      - name: Load dependencies cache
+        id: deps-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          restore-keys: build-${{ matrix.os }}-
+
+      - name: Import dependencies
+        run: esy import-build
+
+      - name: Build dependencies
+        run: esy build-dependencies
+
+      - name: Build
+        run: esy build
+
+      - name: Export dependencies
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: esy export-dependencies
+
+      - name: Upload artifacts for ${{ matrix.os }}
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.os }}
+          path: _build/install/default/bin/sx_ppx
+
+      # Cleanup build cache in case dependencies have changed
+      - name: Cleanup
+        run: esy cleanup .
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Make NPM release skeleton
+        run: node .github/ci-scripts/make-skeleton.js
+
+      - name: Print short SHA
+        id: sha
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      - name: Download linux artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: ubuntu-latest
+          path: _release/platform-linux-x64
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: macos-latest
+          path: _release/platform-darwin-x64
+
+      - name: Release PR NPM package
+        id: pr
+        working-directory: ./_release
+        run: |
+          npm config set scope "@hyper-systems"
+          npm version prerelease --preid ${{ steps.sha.outputs.sha_short }} -no-git-tag-version
+          REMOTE=$(npm view @hyper-systems/rescript-sx version --tag pr || echo "0")
+          CURRENT=$(jq -r '.version' package.json)
+          echo "Remote version: ${REMOTE}"
+          echo "Local version: ${CURRENT}"
+          if [ "$REMOTE" != "$CURRENT" ]
+          then
+              npm publish --access public --tag pr
+              echo "::set-output name=version::$(npm view @hyper-systems/rescript-sx@pr version)"
+          else
+              echo "New verison and remote version are equal, nothing to publish"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - uses: mshick/add-pr-comment@v1
+        with:
+          message: |
+            New **pr** version has been published to the NPM registry: [@hyper-systems/rescript-sx@${{ steps.pr.outputs.version }}](https://www.npmjs.com/package/@hyper-systems/rescript-sx/v/${{ steps.pr.outputs.version }}).
+            Install it with `npm install @hyper-systems/rescript-sx@pr` or `npm install @hyper-systems/rescript-sx@${{ steps.pr.outputs.version }}`.
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token-user-login: 'github-actions[bot]' # The user.login for temporary GitHub tokens
+          allow-repeats: false

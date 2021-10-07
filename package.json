@@ -1,24 +1,23 @@
 {
-  "name": "sx",
+  "name": "@hyper-systems/rescript-sx",
   "version": "0.8.4",
   "description": "Styling extensions for ReScript",
-  "author": "Rizo I. <rizo@odis.io>",
+  "author": "Rizo I. <rizo@hyper.ag>",
   "license": "MIT",
-  "homepage": "https://github.com/rizo/rescript-sx",
+  "homepage": "https://github.com/hyper-systems/rescript-sx",
   "bugs": {
-    "url": "https://github.com/rizo/rescript-sx/issues"
+    "url": "https://github.com/hyper-systems/rescript-sx/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/rizo/rescript-sx.git"
+    "url": "git+https://github.com/hyper-systems/rescript-sx.git"
   },
   "esy": {
-    "build": "dune build -p #{self.name}",
+    "build": "dune build -p sx",
     "buildsInSource": "_build",
     "release": {
       "bin": [
-        "sx_ppx",
-        "sx"
+        "sx_ppx"
       ]
     }
   },
@@ -38,7 +37,7 @@
   },
   "scripts": {
     "clean": "esy dune clean",
-    "build": "esy dune build @all -p #{self.name}",
-    "watch": "esy dune build @all -p #{self.name} --watch"
+    "build": "esy dune build @all -p sx",
+    "watch": "esy dune build @all -p sx --watch"
   }
 }
