@@ -1,0 +1,2 @@
+(lang dune 2.5)
+(env (static (flags (:standard -ccopt -static))))

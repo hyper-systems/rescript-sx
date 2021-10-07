@@ -38,6 +38,7 @@
   "scripts": {
     "clean": "esy dune clean",
     "build": "esy dune build @all -p sx",
-    "watch": "esy dune build @all -p sx --watch"
+    "watch": "esy dune build @all -p sx --watch",
+    "build-static": "dune build --root . --only-packages sx --ignore-promoted-rules --no-config --profile static"
   }
 }

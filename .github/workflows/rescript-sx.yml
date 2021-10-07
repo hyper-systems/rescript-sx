@@ -7,12 +7,12 @@ on:
       - main
 
 jobs:
-  build:
+  build_macos:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         node-version: [14.x]
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -59,6 +59,74 @@ jobs:
         if: steps.deps-cache.outputs.cache-hit != 'true'
         run: esy export-dependencies
 
+      - name: Strip debug symbols for macOS
+        run: strip -S _build/install/default/bin/sx_ppx
+
+      - name: Upload artifacts for ${{ matrix.os }}
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.os }}
+          path: _build/install/default/bin/sx_ppx
+
+      # Cleanup build cache in case dependencies have changed
+      - name: Cleanup
+        run: esy cleanup .
+
+  build_linux_static:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    container:
+       image: node:14-alpine
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # TODO: fix this by adding it to the image instead
+      - name: add build deps
+        run: apk add tar ca-certificates wget curl perl-utils git \
+          patch gcc g++ musl-dev make m4 linux-headers coreutils file
+
+      - name: Load global cache (~/.esy/source)
+        uses: actions/cache@v2
+        with:
+          path: ~/.esy/source
+          key: source-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+
+      - name: Install dependencies
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node .github/ci-scripts/print-esy-cache.js
+
+      - name: Load dependencies cache
+        id: deps-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          restore-keys: build-${{ matrix.os }}-
+
+      - name: Import dependencies
+        run: esy import-build
+
+      - name: Build dependencies
+        run: esy build-dependencies
+
+      # build static binary for linux
+      - name: Build
+        run: esy build-static
+
+      - name: Export dependencies
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: esy export-dependencies
+
+      - name: Strip debug symbols for Linux
+        run: strip --strip-all _build/install/default/bin/sx_ppx
+
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
         with:
@@ -71,7 +139,9 @@ jobs:
 
   publish:
     name: Publish
-    needs: build
+    needs: 
+      - build_macos
+      - build_linux_static
     runs-on: ubuntu-latest
 
     steps:
