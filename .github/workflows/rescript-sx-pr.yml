@@ -88,7 +88,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.esy/source
-          key: source-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          key: source-${{ matrix.os }}-alpine-${{ hashFiles('**/index.json') }}
 
       - name: Install esy
         run: npm install -g --unsafe-perm esy@0.6.11
@@ -105,8 +105,8 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
-          restore-keys: build-${{ matrix.os }}-
+          key: build-${{ matrix.os }}-alpine-${{ hashFiles('**/index.json') }}
+          restore-keys: build-${{ matrix.os }}-alpine-
 
       - name: Import dependencies
         run: esy import-build
