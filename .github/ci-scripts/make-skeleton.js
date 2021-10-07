@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const packageJson = require("../../package.json");
 
-const filesToCopy = ["LICENSE", "README.md"];
+const filesToCopy = ["LICENSE", "README.md", "tailwind.json"];
 
 function mkdirpSync(p) {
   if (fs.existsSync(p)) {
@@ -60,6 +60,7 @@ const pkgJson = {
     "platform-linux-x64/",
     "platform-darwin-x64/",
     "postinstall.js",
+    "tailwind.json",
     "sx_ppx",
   ],
 };

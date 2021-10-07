@@ -1,6 +1,6 @@
 {
   "name": "@hyper-systems/rescript-sx",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Styling extensions for ReScript",
   "author": "Rizo I. <rizo@hyper.ag>",
   "license": "MIT",
