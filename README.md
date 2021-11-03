@@ -16,3 +16,35 @@ module Button = {
   }
 }
 ```
+
+The `%sx(...)` ppx will generate a static CSS file during the build phase with the following content:
+
+```css
+.bg-white {
+  background-color: #fff;
+}
+.border-1 {
+  border-width: 1px;
+}
+.border-purple-700 {
+  border-color: #6b46c1;
+}
+.hover\:bg-purple-700:hover {
+  background-color: #6b46c1;
+}
+.hover\:text-white:hover {
+  color: #fff;
+}
+.p-2 {
+  padding: 0.5rem;
+}
+.text-black {
+  color: #000;
+}
+.text-center {
+  text-align: center;
+}
+.text-lg {
+  font-size: 1.125rem;
+}
+```
