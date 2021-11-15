@@ -2109,6 +2109,9 @@
   "space-y-reverse": [
     "--space-y-reverse: 1"
   ],
+  "bg-none": [
+    "background-image: none;"
+  ],
   "bg-fixed": [
     "background-attachment: fixed;"
   ],
