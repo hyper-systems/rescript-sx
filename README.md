@@ -48,3 +48,19 @@ The `%sx(...)` ppx will generate a static CSS file during the build phase with t
   font-size: 1.125rem;
 }
 ```
+
+## Installation
+
+Install the package:
+```
+$ npm i @hyper-systems/rescript-sx@nightly
+```
+
+Enable the ppx in `bsconfig.json`:
+```json
+  "ppx-flags": [
+    "sx_ppx --output=sx.gen.css"
+  ]
+```
+
+This will generate a static CSS file called `sx.gen.css` that can be loaded directly in your HTML.
