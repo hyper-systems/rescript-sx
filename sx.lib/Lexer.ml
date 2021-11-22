@@ -2,6 +2,7 @@ type 'a fmt = Format.formatter -> 'a -> unit
 
 type token =
   [ `Utility of string
+  | `Content of string
   | `Variant of string
   | `Utility_group_start of string
   | `Variant_group_start of string
@@ -12,6 +13,7 @@ let pp : token fmt =
   let str = Format.pp_print_string ppf in
   match token with
   | `Utility x -> str x
+  | `Content x -> str ("content-\\[" ^ x ^ "\\]")
   | `Variant x -> str (x ^ ":")
   | `Utility_group_start x -> str (x ^ "(")
   | `Variant_group_start x -> str (x ^ ":(")
@@ -21,6 +23,7 @@ let pp : token fmt =
 let variant = [%sedlex.regexp? Plus (lowercase | '-' | '0' .. '9'), ':']
 
 let utility = [%sedlex.regexp? Plus (lowercase | '-' | '0' .. '9')]
+let content = [%sedlex.regexp? Compl ']']
 
 type t = { mutable buf : Sedlexing.lexbuf; mutable group_count : int }
 
@@ -33,6 +36,10 @@ let token self : token list =
       let lexeme = Sedlexing.Latin1.lexeme buf in
       let variant = String.sub lexeme 0 (String.length lexeme - 1) in
       loop (`Variant variant :: acc)
+    | "content-[", Plus (Compl ']'), ']' ->
+      let lexeme = Sedlexing.Latin1.lexeme buf in
+      let content = String.sub lexeme 9 (String.length lexeme - 10) in
+      loop (`Content content :: acc)
     | utility -> loop (`Utility (Sedlexing.Latin1.lexeme buf) :: acc)
     | '(' -> failwith "Unexpected '('"
     | variant, '(' ->

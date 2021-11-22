@@ -4325,7 +4325,8 @@
     "--divide-opacity: 1;"
   ],
   "appearance-none": [
-    "appearance: none;"
+    "appearance: none;",
+    "-webkit-appearance: none;"
   ],
   "cursor-auto": [
     "cursor: auto;"

@@ -106,6 +106,7 @@ let pseudo_class_variants =
       "last";
       "odd";
       "even";
+      "before";
     ]
 
 
@@ -123,6 +124,7 @@ type t = string list String_map.t
 
 type attribute =
   [ `Utility of string
+  | `Content of string
   | `Variant of string * attribute
   | `Utility_group of string * attribute list
   | `Variant_group of string * attribute list ]
@@ -136,7 +138,7 @@ let add_utility_prefix ~prefix name =
 type canonical = {
   scope : [ `sm | `md | `lg | `xl | `xl2 ] option;
   variants : string list;
-  utility : string;
+  utility : [ `custom of string | `standard of string ];
 }
 
 let process_variants input =
@@ -159,12 +161,20 @@ let process_variants input =
   | _ -> raise (Failure "sx: Too many responsive variants")
 
 
-let ungroup (attr : attribute) =
+let normalize (attr : attribute) =
   let rec loop ~utility_prefix ~variant_prefix attr =
     match attr with
     | `Utility name ->
       let scope, variants = process_variants variant_prefix in
-      let utility = add_utility_prefix ~prefix:(List.rev utility_prefix) name in
+      let utility =
+        `standard (add_utility_prefix ~prefix:(List.rev utility_prefix) name)
+      in
+      [ { scope; variants; utility } ]
+    | `Content name ->
+      let scope, variants = process_variants variant_prefix in
+      let utility =
+        `custom (add_utility_prefix ~prefix:(List.rev utility_prefix) name)
+      in
       [ { scope; variants; utility } ]
     | `Variant (name, attr) ->
       let variant_prefix = name :: variant_prefix in
@@ -187,6 +197,7 @@ and pp formatter attr =
   let str = Fmt.string formatter in
   match attr with
   | `Utility name -> str name
+  | `Content name -> str (String.concat "" [ "content-\\["; name; "\\]" ])
   | `Variant (name, attr) ->
     str (name ^ ":");
     pp formatter attr
@@ -206,13 +217,20 @@ module Utility_parser = struct
   let ( <|> ) = Parser.( <|> )
 
   let rec attribute () =
-    utility <|> variant () <|> utility_proup () <|> variant_proup ()
+    utility <|> content <|> variant () <|> utility_proup () <|> variant_proup ()
 
 
   and utility : (Lexer.token, attribute) Parser.t =
    fun input ->
     match input with
     | `Utility x :: input -> Some (`Utility x, input)
+    | _ -> None
+
+
+  and content : (Lexer.token, attribute) Parser.t =
+   fun input ->
+    match input with
+    | `Content x :: input -> Some (`Content x, input)
     | _ -> None
 
 
@@ -283,15 +301,30 @@ let string_of_scope scope =
 
 
 let make_class_name ~scope ~variants ~utility =
-  match (scope, variants) with
-  | None, [] -> utility
-  | Some scope, [] -> string_of_scope scope ^ ":" ^ utility
-  | _ ->
+  match (scope, variants, utility) with
+  | None, [], `standard utility -> utility
+  | Some scope, [], `standard utility -> string_of_scope scope ^ ":" ^ utility
+  | None, [], `custom utility -> utility
+  | Some scope, [], `custom utility ->
+    string_of_scope scope ^ ":" ^ "content-\\[" ^ utility ^ "\\]"
+  | _, _, `standard utility ->
     let selector_prefix =
       Option.fold scope ~none:variants ~some:(fun scope ->
           string_of_scope scope :: variants)
     in
     String.concat ":" selector_prefix ^ ":" ^ utility
+  | _, _, `custom utility ->
+    let selector_prefix =
+      Option.fold scope ~none:variants ~some:(fun scope ->
+          string_of_scope scope :: variants)
+    in
+    String.concat ":" selector_prefix ^ ":" ^ "content-\\[" ^ utility ^ "\\]"
+
+
+let selector_variant_name variant =
+  match variant with
+  | "before" -> ":before"
+  | _ -> variant
 
 
 let make_selector_name ~scope ~variants ~utility =
@@ -304,15 +337,21 @@ let make_selector_name ~scope ~variants ~utility =
           string_of_scope scope :: variants)
     in
     let name = String.concat "\\:" selector_prefix ^ "\\:" ^ utility in
+    let variants = List.map selector_variant_name variants in
     name ^ ":" ^ String.concat ":" variants
 
 
 let css_of_attributes ~mapping attributes =
   let add_attribute css { scope; variants; utility } =
-    let properties =
-      try String_map.find utility mapping
-      with Not_found ->
-        raise (Failure ("Unknown tailwind utility: " ^ utility))
+    let properties, utility =
+      match utility with
+      | `standard utility -> (
+        try (String_map.find utility mapping, utility)
+        with Not_found ->
+          raise (Failure ("Unknown tailwind utility: " ^ utility)))
+      | `custom utility ->
+        ( [ String.concat "" [ "content: "; utility; ";" ] ],
+          "content-\\[" ^ utility ^ "\\]" )
     in
     let selector = make_selector_name ~scope ~variants ~utility in
     Css.add_to_scope scope ~selector ~properties css
@@ -334,17 +373,17 @@ let process (mapping : string list String_map.t) class_name =
   | Error (`With_leftover (_x, _leftover)) -> failwith "Leftover input"
   | Error `Empty | Ok [] -> ("", Css.empty)
   | Ok attributes ->
-    let attributes = list_concat_map ungroup attributes in
+    let canonical = list_concat_map normalize attributes in
     let canonical_class_list =
       List.map
         (fun { scope; variants; utility } ->
           make_class_name ~scope ~variants ~utility)
-        attributes
+        canonical
     in
     (* Add extra spaces to avoid accidental concatenation as in:
        <hr className={%sx("mx-2") ++ "foo"} /> *)
     ( String.concat " " (" " :: canonical_class_list) ^ " ",
-      css_of_attributes ~mapping attributes )
+      css_of_attributes ~mapping canonical )
 
 
 let update_global_css css =
